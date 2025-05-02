@@ -76,6 +76,6 @@ class TotalPrestamo extends StatsOverviewWidget
                 ->color('success');
         }
 
-        return $stats;
+        return $stats;  
     }
 }
