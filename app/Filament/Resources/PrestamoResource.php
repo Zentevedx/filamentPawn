@@ -28,11 +28,7 @@ class PrestamoResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('cliente_id')
-                    ->label('Cliente')
-                    ->relationship('cliente', 'nombre')
-                    ->searchable()
-                    ->required(),
+                
     
                 Forms\Components\TextInput::make('codigo')
                     ->label('Código')
@@ -53,6 +49,12 @@ class PrestamoResource extends Resource
                             $set('multa_por_retraso', number_format($state * 0.01,0, '.', ''));
                         }
                     }),
+
+                Forms\Components\Select::make('cliente_id')
+                    ->label('Cliente')
+                    ->relationship('cliente', 'nombre')
+                    ->searchable()
+                    ->required(),
     
                 Forms\Components\TextInput::make('multa_por_retraso')
                     ->label('Multa por retraso')

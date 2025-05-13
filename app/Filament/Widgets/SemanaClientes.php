@@ -18,7 +18,7 @@ class SemanaClientes extends Widget
         $hoy = Carbon::today('America/La_Paz');
 
         // Si solo quieres 7 días usa range(0, 6)
-        $dias = collect(range(0, 13))->map(fn ($i) => [
+        $dias = collect(range(0, 27))->map(fn ($i) => [
             'fecha'  => $hoy->copy()->addDays($i),
             'nombre' => Str::upper(
                 $hoy->copy()->addDays($i)->locale('es')->isoFormat('dddd')
@@ -26,7 +26,8 @@ class SemanaClientes extends Widget
         ]);
 
         $prestamos = Prestamo::with(['pagos' => fn ($q) => $q->latest('fecha_pago')])
-            ->select('id', 'codigo', 'monto', 'fecha_prestamo')
+            ->select('id','cliente_id', 'codigo', 'monto', 'fecha_prestamo')
+            ->where('estado','Activo')
             ->get();
 
         return compact('dias', 'prestamos');

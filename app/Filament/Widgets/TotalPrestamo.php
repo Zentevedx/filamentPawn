@@ -47,7 +47,9 @@ class TotalPrestamo extends StatsOverviewWidget
         $baseDate = now()->startOfMonth()->subMonths($this->offset);
 
         /* 1. TOTAL histórico (o filtra por estado si quieres) */
-        $totalHistorico = Prestamo::sum('monto');
+// Controlador (o donde hagas la consulta)
+$totalHistorico = Prestamo::where('estado', 'Activo')
+    ->sum('monto');
 
         /* 2. Totales de los 3 meses que comienzan en $baseDate */
         $meses = collect(range(0, 7))->map(function ($i) use ($baseDate) {

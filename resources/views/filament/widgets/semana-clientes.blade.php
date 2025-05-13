@@ -18,12 +18,12 @@
                     $isToday ? 'bg-primary-600/70 ring-2 ring-primary-400' : 'bg-slate-700/60 hover:bg-slate-600/60',
                 ]">
                     {{-- Día de la semana + número --}}
-                    <h3 class="font-bold text-xl tracking-wide text-center">
+                    <p class="font-bold text-xs tracking-wide text-center ">
                         {{ $dia['nombre'] }}
                         <span class="block text-4xl font-extrabold mt-1">
                             {{ $dia['fecha']->day }}
                         </span>
-                    </h3>
+                    </p>
 
                     <div class="w-full flex flex-col gap-1">
                         @foreach ($prestamos as $p)
@@ -48,8 +48,8 @@
                                 <x-filament::button
     :color="$color"
     tag="a"
-    :href="route('filament.pawn.pages.detalle-general', ['record' => $p->id])"
-    size="sm"
+    :href="route('filament.pawn.pages.detalle-general', ['record' => $p->cliente_id])"
+    size="xs"
     class="w-full justify-center whitespace-nowrap">
     {{ $p->codigo }} – {{ number_format($p->monto, 0, ',', '.') }}
 </x-filament::button>
