@@ -10,6 +10,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
+
 
 class PagoResource extends Resource
 {
@@ -126,53 +128,32 @@ class PagoResource extends Resource
     }
     
     // Aquí la magia: calculamos automáticamente Capital e Interes
-    protected static function mutateFormDataBeforeCreate(array $data): array
+
+protected static function mutateFormDataBeforeCreate(array $data): array
 {
     $prestamo = \App\Models\Prestamo::find($data['prestamo_id']);
-    $capitalPagado = $prestamo->pagos()->where('tipo_pago', 'Capital')->sum('monto_pagado');
-    $capitalRestante = $prestamo->monto - $capitalPagado;
-    $montoCliente = $data['monto_pagado'];
 
-    if ($montoCliente >= $capitalRestante) {
-        // Pago Capital completo
-        $pagoCapital = \App\Models\Pago::create([
-            'prestamo_id' => $prestamo->id,
-            'tipo_pago' => 'Capital',
-            'monto_pagado' => $capitalRestante,
-            'fecha_pago' => $data['fecha_pago'],
-        ]);
+    // Registrar el pago
+    $pago = \App\Models\Pago::create([
+        'prestamo_id' => $prestamo->id,
+        'tipo_pago' => $data['tipo_pago'],
+        'monto_pagado' => $data['monto_pagado'],
+        'fecha_pago' => $data['fecha_pago'],
+    ]);
 
-        \App\Models\Caja::create([
-            'tipo_movimiento' => 'Ingreso',
-            'origen' => 'pago',
-            'descripcion' => 'Pago de Capital',
-            'monto' => $capitalRestante,
-            'fecha' => now()->toDateString(),
-            'referencia_id' => $pagoCapital->id,
-            'referencia_tabla' => 'pagos',
-        ]);
+    // Registrar en caja
+    \App\Models\Caja::create([
+        'tipo_movimiento' => 'Ingreso',
+        'origen' => 'pago',
+        'descripcion' => 'Pago de ' . $data['tipo_pago'],
+        'monto' => $data['monto_pagado'],
+        'fecha' => now()->toDateString(),
+        'referencia_id' => $pago->id,
+        'referencia_tabla' => 'pagos',
+    ]);
 
-        $interes = $montoCliente - $capitalRestante;
-
-        if ($interes > 0) {
-            $pagoInteres = \App\Models\Pago::create([
-                'prestamo_id' => $prestamo->id,
-                'tipo_pago' => 'Interes',
-                'monto_pagado' => $interes,
-                'fecha_pago' => $data['fecha_pago'],
-            ]);
-
-            \App\Models\Caja::create([
-                'tipo_movimiento' => 'Ingreso',
-                'origen' => 'pago',
-                'descripcion' => 'Pago de Interes',
-                'monto' => $interes,
-                'fecha' => now()->toDateString(),
-                'referencia_id' => $pagoInteres->id,
-                'referencia_tabla' => 'pagos',
-            ]);
-        }
-
+    // Si el pago es de tipo CAPITAL, actualizar el estado del préstamo y artículos
+    if ($data['tipo_pago'] === 'Capital') {
         $prestamo->estado = 'Pagado';
         $prestamo->save();
 
@@ -181,26 +162,23 @@ class PagoResource extends Resource
             $articulo->save();
         }
 
+        // Notificar cambio de estado
+        Notification::make()
+            ->title('Pago registrado')
+            ->success()
+            ->body("Se registró un pago de CAPITAL. El préstamo fue marcado como 'Pagado' y los artículos como 'Retirado'.")
+            ->send();
     } else {
-        $pagoInteres = \App\Models\Pago::create([
-            'prestamo_id' => $prestamo->id,
-            'tipo_pago' => 'Interes',
-            'monto_pagado' => $montoCliente,
-            'fecha_pago' => $data['fecha_pago'],
-        ]);
-
-        \App\Models\Caja::create([
-            'tipo_movimiento' => 'Ingreso',
-            'origen' => 'pago',
-            'descripcion' => 'Pago de Interes',
-            'monto' => $montoCliente,
-            'fecha' => now()->toDateString(),
-            'referencia_id' => $pagoInteres->id,
-            'referencia_tabla' => 'pagos',
-        ]);
+        // Notificar registro de pago sin cambios de estado
+        Notification::make()
+            ->title('Pago registrado')
+            ->info()
+            ->body("Se registró un pago de tipo {$data['tipo_pago']}. El préstamo no cambió de estado.")
+            ->send();
     }
 
     return [];
 }
+
 
 }

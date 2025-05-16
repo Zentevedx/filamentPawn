@@ -7,7 +7,6 @@ use Filament\Notifications\Notification;
 use App\Models\Cliente;
 use App\Models\Prestamo;
 use App\Models\Articulo;
-use App\Models\Pago;
 use Livewire\Attributes\Url;
 
 class DetalleGeneral extends Page
@@ -29,10 +28,7 @@ class DetalleGeneral extends Page
         return false;
     }
 
-    public static function route(): string
-    {
-        return '/detalle-general/{record}';
-    }
+    
 
     public function mount(): void
     {
@@ -45,12 +41,12 @@ class DetalleGeneral extends Page
             abort(404);
         }
 
-        // Buscar primero como Cliente
-        $cliente = Cliente::find($this->record);
+        // Buscar Cliente
+        $cliente = Cliente::with('prestamos.articulos', 'prestamos.pagos')->find($this->record);
         if ($cliente) {
             $this->recordType = 'cliente';
             $this->recordData = $cliente;
-            $this->prestamos = $cliente->prestamos()->with('articulos', 'pagos')->get();
+            $this->prestamos = $cliente->prestamos;
 
             Notification::make()
                 ->title('Cliente encontrado')
@@ -60,13 +56,13 @@ class DetalleGeneral extends Page
             return;
         }
 
-        // Buscar como Préstamo
-        $prestamo = Prestamo::find($this->record);
+        // Buscar Préstamo
+        $prestamo = Prestamo::with('articulos', 'pagos')->find($this->record);
         if ($prestamo) {
             $this->recordType = 'prestamo';
             $this->recordData = $prestamo;
-            $this->articulos = $prestamo->articulos()->get();
-            $this->pagos = $prestamo->pagos()->get();
+            $this->articulos = $prestamo->articulos;
+            $this->pagos = $prestamo->pagos;
 
             Notification::make()
                 ->title('Préstamo encontrado')
@@ -76,12 +72,11 @@ class DetalleGeneral extends Page
             return;
         }
 
-        // Buscar como Artículo
-        $articulo = Articulo::find($this->record);
+        // Buscar Artículo
+        $articulo = Articulo::with('prestamo.cliente')->find($this->record);
         if ($articulo) {
             $this->recordType = 'articulo';
             $this->recordData = $articulo;
-            $this->prestamo = $articulo->prestamo()->with('cliente')->first();
 
             Notification::make()
                 ->title('Artículo encontrado')

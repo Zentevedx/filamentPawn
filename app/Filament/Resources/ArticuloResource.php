@@ -15,6 +15,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\GlobalSearch\Actions\Action as GlobalSearchAction;
 use Filament\GlobalSearch\Actions\Action;
+use Intervention\Image\Facades\Image;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+
+
+
 
 class ArticuloResource extends Resource
 {
@@ -46,37 +53,36 @@ class ArticuloResource extends Resource
                 ->rows(4)
                 ->nullable(),
 
-            Forms\Components\Select::make('estado')
-                ->label('Estado del artículo')
-                ->options([
-                    'Prendado' => 'Prendado',
-                    'Retirado' => 'Retirado',
-                    'Vencido' => 'Vencido',
-                    'Vendido' => 'Vendido',
-                ])
-                ->default('Prendado')
-                ->required(),
-                Forms\Components\FileUpload::make('foto_url')
-                ->label('Foto del artículo')
-                ->image()
-                ->directory('articulos')
-                ->visibility('public')
-                ->enableOpen()
-                ->enableDownload()
-                ->preserveFilenames(false)
-                ->getUploadedFileNameForStorageUsing(function ($file, $record) {
-                    $codigoPrestamo = $record->prestamo->codigo ?? 'SIN-CODIGO';
-                    $monto = $record->prestamo->monto ?? '0';
-                    $fecha = now()->format('Ymd');
-                    $nombreArticulo = $record->nombre_articulo ?? 'SIN-NOMBRE';
-            
-                    // Tomar solo la primera palabra del nombre del artículo
-                    $primeraPalabra = str($nombreArticulo)->explode(' ')->first() ?? 'ARTICULO';
-            
-                    $extension = $file->getClientOriginalExtension();
-            
-                    return "{$codigoPrestamo}-{$monto}-{$fecha}-{$primeraPalabra}.{$extension}";
-                }),
+      
+
+Forms\Components\FileUpload::make('foto_url')
+    ->label('Foto del artículo')
+    ->image()
+    ->imagePreviewHeight('250')
+    ->directory('articulos')
+    ->visibility('public')
+    ->enableOpen()
+    ->enableDownload()
+    ->preserveFilenames(false)
+    ->saveUploadedFileUsing(function ($file, $record): string {
+    $manager = new ImageManager(new GdDriver());
+
+    $image = $manager->read($file->getRealPath())
+        ->scaleDown(width: 800)
+        ->toJpeg(quality: 75);
+
+    $codigo = $record->prestamo->codigo ?? 'NO-CODIGO';
+    $nombre = str($record->nombre_articulo)->slug() ?? 'articulo';
+    $fecha = now()->format('Ymd');
+    $filename = "{$codigo}-{$nombre}-{$fecha}.jpg";
+
+    Storage::disk('public')->put("articulos/{$filename}", (string) $image->toString());
+
+    return "articulos/{$filename}";
+})
+,
+
+
             
         ]);
 }
